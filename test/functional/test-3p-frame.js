@@ -15,7 +15,7 @@
  */
 
 import {addDataAndJsonAttributes_, getIframe, getBootstrapBaseUrl,
-    prefetchBootstrap} from '../../src/3p-frame';
+    prefetchBootstrap, createDivContainer} from '../../src/3p-frame';
 import {validateData} from '../../src/3p';
 import {documentInfoFor} from '../../src/document-info';
 import {loadPromise} from '../../src/event-helper';
@@ -129,6 +129,26 @@ describe('3p-frame', () => {
       expect(c.textContent).to.contain('pong');
       validateData(win.context.data, ['ping', 'testAttr']);
     });
+  });
+
+  it('should create div', () => {
+    const div = document.createElement('div');
+    div.setAttribute('data-test-attr', 'value');
+    div.setAttribute('data-ping', 'pong');
+    div.setAttribute('width', '50');
+    div.setAttribute('height', '100');
+
+    div.getLayoutBox = function() {
+      return {
+        width: 100,
+        height: 200
+      };
+    };
+
+    const newDiv = createDivContainer(window, div, 'a9');
+    expect(newDiv.id).to.equal('amp_ad_a9_0');
+    expect(newDiv.width).to.equal(50);
+    expect(newDiv.height).to.equal(100);
   });
 
   it('should pick the right bootstrap url (test default)', () => {
