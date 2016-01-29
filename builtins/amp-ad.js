@@ -271,56 +271,54 @@ export function installAd(win) {
      * @private
      */
     validateAndRenderOrFallback_(ampHtmlAd) {
-      var uniqueId;
-
       // First find the body of the valid AMP document. Wrap this in an
       // identifiable div and append it as a child to our amp-ad tag.
       var ampBodyStart = ampHtmlAd.indexOf("<body>");
       if(ampBodyStart > 0) {
         var ampBodyEnd = ampHtmlAd.lastIndexOf("</body>");
-        var ampBody = ampHtmlAd.substring(ampBodyStart + "<body>".length,
-          ampBodyEnd);
         var div = createDivContainer(this.element.ownerDocument.defaultView,
             this.element);
-        uniqueId = " #" + div.id + " ";
-        div.innerHTML = ampBody;
+        var uniqueId = " #" + div.id + " ";
+        div.innerHTML = ampHtmlAd.substring(
+          ampBodyStart + "<body>".length, ampBodyEnd);;
         this.element.appendChild(div);
-      }
 
-      // Next append any styles to our amp-custom style tag. Use the unique
-      // div id to nest these styles appropriately.
-      var ampStyleStart = ampHtmlAd.indexOf("<style amp-custom>");
-      if(ampStyleStart > 0) {
-        var ampStyleEnd = ampHtmlAd.indexOf("</style>", ampStyleStart);
-        var ampStyle = ampHtmlAd.substring(ampStyleStart +
-          "<style amp-custom>".length, ampStyleEnd);
 
-        // Split the string on ending braces, remove the empty item at the end,
-        // and create new set of styles nesting the existing styles as
-        // descendants of the unique id of the div.
-        var splitArray = ampStyle.split('}');
-        splitArray.pop();
-        ampStyle = uniqueId.concat(splitArray.join('} ' + uniqueId), '}');
+        // Next append any styles to our amp-custom style tag. Use the unique
+        // div id to nest these styles appropriately.
+        var ampStyleStart = ampHtmlAd.indexOf("<style amp-custom>");
+        if(ampStyleStart > 0) {
+          var ampStyleEnd = ampHtmlAd.indexOf("</style>", ampStyleStart);
+          var ampStyle = ampHtmlAd.substring(ampStyleStart +
+            "<style amp-custom>".length, ampStyleEnd);
 
-        // Lastly find the amp-custom tag and append to that.
-        var styleTags = document.getElementsByTagName("style");
-        var customStyleTag = null;
-        for (var i = 0; i < styleTags.length; i++)
-        {
-          if(styleTags[i].attributes.getNamedItem("amp-custom") != null)
+          // Split the string on ending braces, remove the empty item at the end,
+          // and create new set of styles nesting the existing styles as
+          // descendants of the unique id of the div.
+          var splitArray = ampStyle.split('}');
+          splitArray.pop();
+          ampStyle = uniqueId + splitArray.join('} ' + uniqueId) + '}');
+
+          // Lastly find the amp-custom tag and append to that.
+          var styleTags = document.getElementsByTagName("style");
+          var customStyleTag = null;
+          for (var i = 0; i < styleTags.length; i++)
           {
-            customStyleTag = styleTags[i];
-            break;
+            if(styleTags[i].attributes.getNamedItem("amp-custom") != null)
+            {
+              customStyleTag = styleTags[i];
+              break;
+            }
           }
+          // If no amp-custom tag exists, create one.
+          if (customStyleTag === null) {
+            var head = document.head || document.getElementsByTagName('head')[0];
+            customStyleTag = document.createElement('style');
+            customStyleTag.setAttribute('amp-custom','');
+            head.appendChild(customStyleTag);
+          }
+          customStyleTag.innerHTML = customStyleTag.innerHTML.concat(ampStyle);
         }
-        // If no amp-custom tag exists, create one.
-        if (customStyleTag === null) {
-          var head = document.head || document.getElementsByTagName('head')[0];
-          customStyleTag = document.createElement('style');
-          customStyleTag.setAttribute('amp-custom','');
-          head.appendChild(customStyleTag);
-        }
-        customStyleTag.innerHTML = customStyleTag.innerHTML.concat(ampStyle);
       }
     }
   }
