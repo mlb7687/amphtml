@@ -112,6 +112,27 @@ export function getIframe(parentWindow, element, opt_type) {
 }
 
 /**
+ * Since AMP ads are rendered right in the DOM, create a div container with a
+ * unique id to hold them instead of an iframe.
+ * @param {!Window} parentWindow
+ * @param {!Element} element
+ * @param {string=} opt_type
+ * @return {!Element} The div to render AMP ads into.
+ */
+export function createDivContainer(parentWindow, element, opt_type) {
+  const attributes = getFrameAttributes(parentWindow, element, opt_type);
+  if (!count[attributes.type]) {
+    count[attributes.type] = 0;
+  }
+
+  var div = document.createElement('div');
+  div.id = 'amp_ad_' + attributes.type + '_' + count[attributes.type]++;
+  div.width = attributes.width;
+  div.height = attributes.height;
+  return div;
+}
+
+/**
  * Copies data- attributes from the element into the attributes object.
  * Removes the data- from the name and capitalizes after -. If there
  * is an attribute called json, parses the JSON and adds it to the
