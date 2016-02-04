@@ -16,7 +16,6 @@
 
 import {assert} from './asserts';
 import {getService} from './service';
-import {isArray, isObject} from './types';
 
 
 /**
@@ -37,8 +36,8 @@ let FetchInitDef;
 /** @private @const {!Array<string>} */
 const allowedMethods_ = ['GET', 'POST'];
 
-/** @private @const {!Array<function:boolean>} */
-const allowedBodyTypes_ = [isArray, isObject];
+/** @private @const {!Array<string>} */
+const allowedBodyTypes_ = ['[object Object]', '[object Array]'];
 
 
 /**
@@ -78,6 +77,28 @@ class Xhr {
   }
 
   /**
+   * @param {string} input
+   * @param {?Array<!string>} headers
+   * @return {!Promise<{{responseText: !string, headers: !Array<?string>}}>}
+   */
+  fetchResponseText(input, headers, opt_init) {
+    const init = opt_init || {};
+    init.method = normalizeMethod_(init.method);
+
+    return this.fetch_(input, init).then(response => {
+      const successPromise = assertSuccess(response);
+      let result = {};
+      return successPromise.drainText(responseText => {
+        result['responseText'] = responseText;
+        return successPromise.getHeaders(headers || []);
+      }).then(headersObj => {
+        result['headers'] = headersObj;
+        return result;
+      });
+    });
+  }
+
+  /**
    * Sends the request, awaits result and confirms that it was successful.
    *
    * See https://developer.mozilla.org/en-US/docs/Web/API/GlobalFetch/fetch
@@ -104,16 +125,7 @@ export function normalizeMethod_(method) {
   if (method === undefined) {
     return 'GET';
   }
-  method = method.toUpperCase();
-
-  assert(
-    allowedMethods_.indexOf(method) > -1,
-    'Only one of %s is currently allowed. Got %s',
-    allowedMethods_.join(', '),
-    method
-  );
-
-  return method;
+  return method.toUpperCase();
 }
 
 /**
@@ -122,18 +134,22 @@ export function normalizeMethod_(method) {
  * @private
  */
 function setupJson_(init) {
+  assert(allowedMethods_.indexOf(init.method) != -1, 'Only one of ' +
+      allowedMethods_.join(', ') + ' is currently allowed. Got %s',
+      init.method);
+
   init.headers = {
     'Accept': 'application/json'
   };
 
   if (init.method == 'POST') {
+    const bodyType = Object.prototype.toString.call(init.body);
+
     // Assume JSON strict mode where only objects or arrays are allowed
     // as body.
-    assert(
-      allowedBodyTypes_.some(test => test(init.body)),
-      'body must be of type object or array. %s',
-      init.body
-    );
+    assert(allowedBodyTypes_.indexOf(bodyType) > -1,
+        'body must be of type object or array. %s',
+        init.body);
 
     init.headers['Content-Type'] = 'application/json;charset=utf-8';
     init.body = JSON.stringify(init.body);
@@ -264,12 +280,24 @@ class FetchResponse {
   /**
    * Drains the response and returns the text.
    * @return {!Promise<string>}
-   * @private
    */
-  drainText_() {
+  drainText() {
     assert(!this.bodyUsed, 'Body already used');
     this.bodyUsed = true;
     return Promise.resolve(this.xhr_.responseText);
+  }
+
+  /**
+   * @param {!Array<!string>} headerNames
+   * @return {!Promise<!Object<string, ?string>>}
+   */
+  getHeaders(headerNames) {
+    let result = [];
+    for (let i = 0; i < headerNames.length; i++) {
+      const headerName = headerNames[i];
+      result[headerName] = this.xhr_.getResponseHeader(headerName);
+    }
+    return Promise.resolve(result);
   }
 
   /**
@@ -277,7 +305,7 @@ class FetchResponse {
    * @return {!Promise<!JSONValue>}
    */
   json() {
-    return this.drainText_().then(JSON.parse);
+    return this.drainText().then(JSON.parse);
   }
 }
 

@@ -24,6 +24,7 @@ import {listenOnce} from '../src/iframe-helper';
 import {loadPromise} from '../src/event-helper';
 import {registerElement} from '../src/custom-element';
 import {timer} from '../src/timer';
+import {adsense} from '../ads/adsense';
 
 
 /** @private @const These tags are allowed to have fixed positioning */
@@ -49,6 +50,10 @@ export function installAd(win) {
 
     /** @override  */
     renderOutsideViewport() {
+      // Allow AdSense to send XHR request.
+      if (this.element.getAttribute('type') == 'adsense') {
+        return true;
+      }
       // Before the user has scrolled we only render ads in view. This prevents
       // excessive jank in situations like swiping through a lot of articles.
       if (!this.getViewport().hasScrolled()) {
@@ -110,6 +115,9 @@ export function installAd(win) {
 
       /** @private {IntersectionObserver} */
       this.intersectionObserver_ = null;
+
+      /** @private {!Promise<!{creative: string, signature: ?string}} */
+      this.xhrPromise_ = null;
     }
 
     /**
@@ -207,6 +215,13 @@ export function installAd(win) {
 
     /** @override */
     layoutCallback() {
+      assert(!this.isInFixedContainer_,
+          '<amp-ad> is not allowed to be placed in elements with ' +
+          'position:fixed: %s', this.element);
+      let xhrAdRequest = this.sendXhrAdRequest_();
+      if (xhrAdRequest) {
+        return xhrAdRequest;
+      }
       loadingAdsCount++;
       timer.delay(() => {
         // Unfortunately we don't really have a good way to measure how long it
@@ -214,9 +229,6 @@ export function installAd(win) {
         // now.
         loadingAdsCount--;
       }, 1000);
-      assert(!this.isInFixedContainer_,
-          '<amp-ad> is not allowed to be placed in elements with ' +
-          'position:fixed: %s', this.element);
       if (!this.iframe_) {
         this.iframe_ = getIframe(this.element.ownerDocument.defaultView,
             this.element);
@@ -261,6 +273,37 @@ export function installAd(win) {
           this.toggleFallback(true);
         }
         this.element.removeChild(this.iframe_);
+      });
+    }
+
+    /**
+     * @return {?Promise}
+     * @private
+     */
+    sendXhrAdRequest_() {
+      // Allow AdSense to send XHR request.
+      if (!this.element.getAttribute('type') == 'adsense') {
+        return null;
+      }
+      // Extract data attributes.
+      let attributes = {};
+      for (let i = 0; i < element.attributes.length; i++) {
+        const attr = element.attributes[i];
+        if (attr.name.indexOf('data-') != 0) {
+          continue;
+        }
+        attributes[dashToCamelCase(attr.name.substr(5))] = attr.value;
+      }
+      return adsenseAmpRequest(this.getWin(), attributes).then(adResponse => {
+        if (!adResponse || !adResponse.creative) {
+          this.noContentHandler_();
+        } else if (adResponse.signature == '12345') {
+          // inject amp ad
+          console.log('valid amp ad!', adResponse.creative);
+        } else {
+          // not amp so inject in iframe
+          console.log('invalid amp ad!', adResponse.creative);
+        }
       });
     }
   }

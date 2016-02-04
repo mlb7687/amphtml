@@ -15,6 +15,7 @@
  */
 
 import {checkData} from '../src/3p';
+import {xhrFor} from '../src/xhr';
 
 /**
  * @param {!Window} global
@@ -37,4 +38,37 @@ export function adsense(global, data) {
   i.style.cssText = 'display:inline-block;width:100%;height:100%;';
   global.document.getElementById('c').appendChild(i);
   (global.adsbygoogle = global.adsbygoogle || []).push({});
+}
+
+/**
+ * @param {!Window} global
+ * @param {!Object} data
+ * @return {!Promise<!{creative: string, signature: ?string}}
+ */
+export function adsenseAmpRequest(global, data) {
+  return getAdUrl_(global, data).then(src => {
+    return xhrFor(global).fetchResponseText(src, ['amp-signature'])
+    .then(responseObj => {
+      return {
+        'creative': responseObj.responseText,
+        'signature': responseObj.headersObj['amp-signature']
+      };
+    }, err => {
+      // hello
+      console.error('Error fetching ad xhr: ', src, err);
+    });
+  });
+}
+
+/**
+ * @param {!Window} global
+ * @param {!Object} data
+ * @return {!Promise<!string>}
+ * @private
+ */
+function getAdUrl_(global, data) {
+  // TODO(kjwright): using reactive tag end point as it supports CORS, replace
+  // with actual later.
+  return Promise.resolve(
+    'https://pagead2.googlesyndication.com/getconfig/pla?client=ca-google');
 }
