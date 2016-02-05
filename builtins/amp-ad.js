@@ -296,7 +296,7 @@ export function installAd(win) {
           // descendants of the unique id of the ins.
           var splitArray = ampStyle.split('}');
           splitArray.pop();
-          ampStyle = uniqueId + splitArray.join('} ' + uniqueId) + '}');
+          ampStyle = uniqueId + splitArray.join('} ' + uniqueId) + '}';
 
           // Lastly find the amp-custom tag and append to that.
           var styleTags = document.getElementsByTagName("style");
