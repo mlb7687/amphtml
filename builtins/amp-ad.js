@@ -17,7 +17,7 @@
 import {BaseElement} from '../src/base-element';
 import {adPrefetch, adPreconnect} from '../ads/_prefetch';
 import {assert} from '../src/asserts';
-import {getIframe, prefetchBootstrap, createDivContainer} from '../src/3p-frame';
+import {getIframe, prefetchBootstrap, createAmpAdContainer} from '../src/3p-frame';
 import {IntersectionObserver} from '../src/intersection-observer';
 import {isLayoutSizeDefined} from '../src/layout';
 import {listenOnce} from '../src/iframe-helper';
@@ -265,36 +265,35 @@ export function installAd(win) {
     }
 
     /**
-     * Takes an AMP ad and immediately renders.
-     * @param {string} ampHtmlAd AMP HTML that will be immediately rendered if
-     *   it is validated.
+     * Takes an AMP ad that was validated and immediately renders.
+     * @param {string} ampHtmlAd AMP HTML that will be immediately rendered.
      * @private
      */
-    validateAndRenderOrFallback_(ampHtmlAd) {
+    renderValidAmpHtml_(ampHtmlAd) {
       // First find the body of the valid AMP document. Wrap this in an
-      // identifiable div and append it as a child to our amp-ad tag.
+      // identifiable ins and append it as a child to our amp-ad tag.
       var ampBodyStart = ampHtmlAd.indexOf("<body>");
-      if(ampBodyStart > 0) {
+      if (ampBodyStart > 0) {
         var ampBodyEnd = ampHtmlAd.lastIndexOf("</body>");
-        var div = createDivContainer(this.element.ownerDocument.defaultView,
+        var ins = createAmpAdContainer(this.element.ownerDocument.defaultView,
             this.element);
-        var uniqueId = " #" + div.id + " ";
-        div.innerHTML = ampHtmlAd.substring(
-          ampBodyStart + "<body>".length, ampBodyEnd);;
-        this.element.appendChild(div);
+        var uniqueId = " #" + ins.id + " ";
+        ins.innerHTML = ampHtmlAd.substring(
+          ampBodyStart + "<body>".length, ampBodyEnd);
+        this.element.appendChild(ins);
 
 
         // Next append any styles to our amp-custom style tag. Use the unique
-        // div id to nest these styles appropriately.
+        // ins id to nest these styles appropriately.
         var ampStyleStart = ampHtmlAd.indexOf("<style amp-custom>");
-        if(ampStyleStart > 0) {
+        if (ampStyleStart > 0) {
           var ampStyleEnd = ampHtmlAd.indexOf("</style>", ampStyleStart);
           var ampStyle = ampHtmlAd.substring(ampStyleStart +
             "<style amp-custom>".length, ampStyleEnd);
 
           // Split the string on ending braces, remove the empty item at the end,
           // and create new set of styles nesting the existing styles as
-          // descendants of the unique id of the div.
+          // descendants of the unique id of the ins.
           var splitArray = ampStyle.split('}');
           splitArray.pop();
           ampStyle = uniqueId + splitArray.join('} ' + uniqueId) + '}');
@@ -302,9 +301,8 @@ export function installAd(win) {
           // Lastly find the amp-custom tag and append to that.
           var styleTags = document.getElementsByTagName("style");
           var customStyleTag = null;
-          for (var i = 0; i < styleTags.length; i++)
-          {
-            if(styleTags[i].attributes.getNamedItem("amp-custom") != null)
+          for (var i = 0; i < styleTags.length; i++) {
+            if(styleTags[i].attributes.getNamedItem("amp-custom"))
             {
               customStyleTag = styleTags[i];
               break;
@@ -317,7 +315,7 @@ export function installAd(win) {
             customStyleTag.setAttribute('amp-custom','');
             head.appendChild(customStyleTag);
           }
-          customStyleTag.innerHTML = customStyleTag.innerHTML.concat(ampStyle);
+          customStyleTag.innerHTML += ampStyle;
         }
       }
     }

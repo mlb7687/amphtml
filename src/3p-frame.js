@@ -112,24 +112,26 @@ export function getIframe(parentWindow, element, opt_type) {
 }
 
 /**
- * Since AMP ads are rendered right in the DOM, create a div container with a
- * unique id to hold them instead of an iframe.
+ * Since AMP ads are rendered right in the DOM, create an ins container with a
+ * unique id to hold them instead of an iframe. Start amp-ad with random
+ * id number to help prevent publishers from overriding css.
  * @param {!Window} parentWindow
  * @param {!Element} element
  * @param {string=} opt_type
  * @return {!Element} The div to render AMP ads into.
  */
-export function createDivContainer(parentWindow, element, opt_type) {
+export function createAmpAdContainer(parentWindow, element, opt_type) {
+  const ampAdKey = 'amp-ad';
   const attributes = getFrameAttributes(parentWindow, element, opt_type);
-  if (!count[attributes.type]) {
-    count[attributes.type] = 0;
+  if (!count[ampAdKey]) {
+    count[ampAdKey] = Math.floor((Math.random() * 10000));
   }
 
-  var div = document.createElement('div');
-  div.id = 'amp_ad_' + attributes.type + '_' + count[attributes.type]++;
-  div.width = attributes.width;
-  div.height = attributes.height;
-  return div;
+  var ins = document.createElement('ins');
+  ins.id = 'amp_ad_' + attributes.type + '_' + count[ampAdKey]++;
+  ins.width = attributes.width;
+  ins.height = attributes.height;
+  return ins;
 }
 
 /**
